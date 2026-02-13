@@ -12,6 +12,7 @@ letra_digitada:   .byte 0
 erros:            .word 0
 max_erros:        .word 6
 
+
 # -------- Mensagens --------
 msg_inicio:    .asciiz "\n=== JOGO DA FORCA - OAC ===\n"
 msg_j1:        .asciiz "\nJogador 1, digite a palavra secreta: "
@@ -20,8 +21,11 @@ msg_letra:     .asciiz "\nDigite uma letra: "
 msg_vitoria:   .asciiz "\nVITORIA!\n"
 msg_derrota:   .asciiz "\nDERROTA!\n"
 msg_palavra:   .asciiz "\nA palavra era: "
+msg_erros:     .asciiz "Erros: "
+msg_palavra:   .asciiz "\nA palavra era: "
 
 quebra_linha:  .asciiz "\n"
+barra:         .asciiz "/"
 
 
 ############################
@@ -107,9 +111,14 @@ loop_init:
 
     li $t3, 95                 # '_'
     sb $t3, 0($t1)
-
-    addi $t0, $t0, 1
+    addi $t1, $t1, 1   
+    
+    # coloca espaço entre os _
+    li $t3, 32
+    sb $t3, 0($t1)
     addi $t1, $t1, 1
+    
+    addi $t0, $t0, 1
 
     j loop_init
 
@@ -125,8 +134,39 @@ fim_init:
 #################################################
 
 mostrar_palavra:
-    # Imprimir palavra_exibida
 
+    li $v0, 4
+    la $a0, palavra_exibida
+    syscall
+
+    li $v0, 4
+    la $a0, quebra_linha
+    syscall
+
+    # mostrar "Erros: "
+    li $v0, 4
+    la $a0, msg_erros
+    syscall
+
+    # imprimir valor de erros
+    li $v0, 1
+    lw $a0, erros
+    syscall
+
+    # imprimir "/"
+    li $v0, 4
+    la $a0, barra
+    syscall
+
+    # imprimir max_erros
+    li $v0, 1
+    lw $a0, max_erros
+    syscall
+
+    li $v0, 4
+    la $a0, quebra_linha
+    syscall
+    
     jr $ra
 
 
@@ -147,6 +187,10 @@ ler_letra:
 
     # Salvar em letra_digitada
     sb $v0, letra_digitada
+    
+    # Consumir ENTER
+    li $v0, 12
+    syscall
 
     jr $ra
 
@@ -156,11 +200,46 @@ ler_letra:
 #################################################
 
 verificar_letra:
-    # Percorrer palavra original
-    # Comparar com letra_digitada
-    # Atualizar palavra_exibida
-    # Se não encontrar, incrementar erros
 
+    la $t0, palavra_secreta
+    la $t1, palavra_exibida
+
+    lb $t3, letra_digitada         # letra digitada
+    li $t4, 0                      # flag = não encontrou
+
+loop_verifica:
+
+    lb $t2, 0($t0)
+
+    beq $t2, 10, fim_verifica   # '\n'
+    beq $t2, $zero, fim_verifica
+
+    beq $t2, $t3, acertou
+
+continuar:
+
+    addi $t0, $t0, 1
+    addi $t1, $t1, 2
+    
+    j loop_verifica
+
+acertou:
+
+    sb $t3, 0($t1)   # coloca letra na palavra_exibida
+    li $t4, 1        # marca que encontrou
+    j continuar
+
+fim_verifica:
+
+    beq $t4, 1, fim_funcao  # se encontrou, não conta erro
+
+    # incrementar erros
+    la $t5, erros
+    lw $t6, 0($t5)
+    addi $t6, $t6, 1
+    sw $t6, 0($t5)
+
+fim_funcao:
     jr $ra
 
 
@@ -169,8 +248,53 @@ verificar_letra:
 #################################################
 
 verificar_fim:
-    # Verificar vitória
-    # Verificar derrota
-    # Se terminar, encerrar programa
+
+    # Verificar se venceu
+    la $t0, palavra_exibida
+
+loop_verifica_fim:
+
+    lb $t1, 0($t0)
+
+    beq $t1, $zero, venceu   # chegou no fim sem '_'
+    
+    li $t2, 95               # '_'
+    beq $t1, $t2, ainda_nao_venceu
+
+    addi $t0, $t0, 1
+    j loop_verifica_fim
+
+
+ainda_nao_venceu:
+
+    # verificar se perdeu
+    la $t3, erros
+    lw $t4, 0($t3)
+
+    la $t5, max_erros
+    lw $t6, 0($t5)
+
+    beq $t4, $t6, perdeu
 
     jr $ra
+
+
+venceu:
+
+    li $v0, 4
+    la $a0, msg_vitoria
+    syscall
+
+    li $v0, 10
+    syscall
+
+
+perdeu:
+
+    li $v0, 4
+    la $a0, msg_derrota
+    syscall
+
+    li $v0, 10
+    syscall
+
