@@ -11,6 +11,9 @@ letra_digitada:   .byte 0
 
 erros:            .word 0
 max_erros:        .word 6
+letras_usadas:    .space 26
+qtd_letras:       .word 0
+
 
 
 # -------- Mensagens --------
@@ -22,7 +25,8 @@ msg_vitoria:   .asciiz "\nVITORIA!\n"
 msg_derrota:   .asciiz "\nDERROTA!\n"
 msg_palavra:   .asciiz "\nA palavra era: "
 msg_erros:     .asciiz "Erros: "
-msg_palavra:   .asciiz "\nA palavra era: "
+msg_usadas:    .asciiz "Letras usadas: "
+
 
 quebra_linha:  .asciiz "\n"
 barra:         .asciiz "/"
@@ -51,6 +55,9 @@ main:
     jal inicializar_palavra      # Inicializa palavra exibida com "_"
 
     sw $zero, erros              # Resetar erros
+    
+    sw $zero, qtd_letras         # Resetar letras já usadas
+
 
     # Avisar Jogador 2
     li $v0, 4
@@ -167,6 +174,39 @@ mostrar_palavra:
     la $a0, quebra_linha
     syscall
     
+    # Mostrar "Letras usadas: "
+    li $v0, 4
+    la $a0, msg_usadas
+    syscall
+
+    # Carregar quantidade de letras usadas
+    lw $t0, qtd_letras
+    la $t1, letras_usadas
+    li $t2, 0
+
+loop_mostrar_usadas:
+
+    beq $t2, $t0, fim_mostrar_usadas
+
+    lb $a0, 0($t1)
+    li $v0, 11          # imprimir caractere
+    syscall
+
+    # imprimir espaço
+    li $a0, 32
+    li $v0, 11
+    syscall
+
+    addi $t1, $t1, 1
+    addi $t2, $t2, 1
+    j loop_mostrar_usadas
+
+fim_mostrar_usadas:
+
+    li $v0, 4
+    la $a0, quebra_linha
+    syscall
+    
     jr $ra
 
 
@@ -201,12 +241,40 @@ ler_letra:
 
 verificar_letra:
 
+    lb $t3, letra_digitada      # letra digitada
+    
+    la $t7, palavra_exibida
+    
+    la $t0, letras_usadas
+    lw $t1, qtd_letras
+    li $t2, 0                   # contador
+
+loop_verifica_usadas:
+
+    beq $t2, $t1, letra_nova    # chegou no fim -> é nova
+
+    lb $t4, 0($t0)
+    beq $t4, $t3, fim_funcao    # já foi digitada -> sair
+
+    addi $t0, $t0, 1
+    addi $t2, $t2, 1
+    j loop_verifica_usadas
+
+letra_nova:
+
+    # salvar letra no vetor
+    la $t0, letras_usadas
+    lw $t1, qtd_letras
+    add $t0, $t0, $t1
+    sb $t3, 0($t0)
+
+    addi $t1, $t1, 1
+    sw $t1, qtd_letras   
+
     la $t0, palavra_secreta
     la $t1, palavra_exibida
-
-    lb $t3, letra_digitada         # letra digitada
-    li $t4, 0                      # flag = não encontrou
-
+    li $t4, 0                   # flag = não encontrou
+    
 loop_verifica:
 
     lb $t2, 0($t0)
@@ -285,6 +353,14 @@ venceu:
     la $a0, msg_vitoria
     syscall
 
+    li $v0, 4
+    la $a0, msg_palavra
+    syscall
+
+    li $v0, 4
+    la $a0, palavra_secreta
+    syscall
+    
     li $v0, 10
     syscall
 
@@ -293,6 +369,14 @@ perdeu:
 
     li $v0, 4
     la $a0, msg_derrota
+    syscall
+    
+    li $v0, 4
+    la $a0, msg_palavra
+    syscall
+
+    li $v0, 4
+    la $a0, palavra_secreta
     syscall
 
     li $v0, 10
