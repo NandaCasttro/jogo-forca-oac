@@ -1,0 +1,10 @@
+computador
+assembly
+programacao
+mips
+sistemas
+algoritmo
+processador
+memoria
+compilador
+registrador

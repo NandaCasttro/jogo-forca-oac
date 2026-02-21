@@ -14,7 +14,8 @@ max_erros:        .word 6
 letras_usadas:    .space 26
 qtd_letras:       .word 0
 
-
+nome_arquivo:     .asciiz "/Users/senhoritaf/Desktop/OAC/Jogo_Forca/palavras.txt"
+buffer_arquivo:   .space 200
 
 # -------- Mensagens --------
 msg_inicio:    .asciiz "\n=== JOGO DA FORCA - OAC ===\n"
@@ -30,7 +31,9 @@ msg_usadas:    .asciiz "Letras usadas: "
 
 quebra_linha:  .asciiz "\n"
 barra:         .asciiz "/"
+msg_erro:      .asciiz "Erro ao abrir arquivo\n"
 
+msg_teste:         .asciiz "Palavra lida: "
 
 ############################
 #           TEXT           #
@@ -45,24 +48,45 @@ barra:         .asciiz "/"
 
 main:
 
-    # Mostra mensagem inicial
+    jal ler_arquivo
+    jal copiar_primeira_palavra
+
+    # imprimir mensagem
     li $v0, 4
-    la $a0, msg_inicio
+    la $a0, msg_teste
     syscall
 
-    jal ler_palavra              # ler palavra do jogador 1
+    # imprimir palavra
+    li $v0, 4
+    la $a0, palavra_secreta
+    syscall
 
-    jal inicializar_palavra      # Inicializa palavra exibida com "_"
+    # pular linha
+    li $v0, 11
+    li $a0, 10
+    syscall
 
-    sw $zero, erros              # Resetar erros
+    # encerrar
+    li $v0, 10
+    syscall
+
+
+    # Mostra mensagem inicial
+    #li $v0, 4
+    #la $a0, msg_inicio
+    #syscall
+
+    #jal inicializar_palavra      # Inicializa palavra exibida com "_"
+
+    #sw $zero, erros              # Resetar erros
     
-    sw $zero, qtd_letras         # Resetar letras já usadas
+    #sw $zero, qtd_letras         # Resetar letras já usadas
 
 
     # Avisar Jogador 2
-    li $v0, 4
-    la $a0, msg_j2
-    syscall
+    #li $v0, 4
+    #la $a0, msg_j2
+    #syscall
     
 #################################################
 #               LOOP PRINCIPAL                  #
@@ -82,23 +106,67 @@ loop_jogo:
 
 
 #################################################
-#           LER PALAVRA (JOGADOR 1)             #
+#               LER ARQUIVO                     #
 #################################################
 
-ler_palavra:
-    # Mostrar mensagem
-    li $v0, 4
-    la $a0, msg_j1
+ler_arquivo:
+    # Abrir arquivo
+    li $v0, 13          # syscall open
+    la $a0, nome_arquivo
+    li $a1, 0
+    li $a2, 0
     syscall
 
-    # Ler string
-    li $v0, 8
-    la $a0, palavra_secreta
-    li $a1, 40
-    syscall
+    bltz $v0, erro_arquivo      # se retorno < 0 vai dar erro
 
+    move $s0, $v0
+    
+    # Ler arquivo
+    li $v0, 14          # syscall read
+    move $a0, $s0
+    la $a1, buffer_arquivo
+    li $a2, 200
+    syscall
+    
+    move $s1, $v0       # bytes lidos
+    
+    add $t0, $a1, $s1   # endereço buffer + bytes_lidos
+    sb $zero, 0($t0)    # coloca '\0'
+    
+     # Fechar arquivo
+    li $v0, 16
+    move $a0, $s0
+    syscall
+    
     jr $ra
 
+#################################################
+#        COPIAR PRIMEIRA PALAVRA               #
+#################################################
+
+copiar_primeira_palavra:
+
+    la $t0, buffer_arquivo
+    la $t1, palavra_secreta
+
+loop_copia:
+
+    lb $t2, 0($t0)
+
+    beq $t2, 10, fim_copia     # '\n'
+    beq $t2, $zero, fim_copia
+
+    sb $t2, 0($t1)
+
+    addi $t0, $t0, 1
+    addi $t1, $t1, 1
+
+    j loop_copia
+
+fim_copia:
+
+    sb $zero, 0($t1)
+    jr $ra
 
 #################################################
 #        INICIALIZAR PALAVRA EXIBIDA            #
@@ -377,6 +445,14 @@ perdeu:
 
     li $v0, 4
     la $a0, palavra_secreta
+    syscall
+
+    li $v0, 10
+    syscall
+    
+erro_arquivo:
+    li $v0, 4
+    la $a0, msg_erro
     syscall
 
     li $v0, 10
