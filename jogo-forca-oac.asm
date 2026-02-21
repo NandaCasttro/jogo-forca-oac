@@ -49,7 +49,8 @@ msg_teste:         .asciiz "Palavra lida: "
 main:
 
     jal ler_arquivo
-    jal copiar_primeira_palavra
+    jal escolher_linha
+    #jal copiar_primeira_palavra
 
     # imprimir mensagem
     li $v0, 4
@@ -141,32 +142,72 @@ ler_arquivo:
     jr $ra
 
 #################################################
-#        COPIAR PRIMEIRA PALAVRA               #
+#      ESCOLHER LINHA ALEATORIA                #
 #################################################
 
-copiar_primeira_palavra:
+escolher_linha:
 
     la $t0, buffer_arquivo
-    la $t1, palavra_secreta
+    li $t3, 0
 
-loop_copia:
+conta_loop:
+    lb $t1, 0($t0)
+    beq $t1, $zero, fim_conta
+    beq $t1, 10, soma_linha
+    addi $t0, $t0, 1
+    j conta_loop
 
-    lb $t2, 0($t0)
+soma_linha:
+    addi $t3, $t3, 1
+    addi $t0, $t0, 1
+    j conta_loop
 
-    beq $t2, 10, fim_copia     # '\n'
-    beq $t2, $zero, fim_copia
+fim_conta:
 
-    sb $t2, 0($t1)
+    li $v0, 42
+    move $a1, $t3
+    syscall
+
+    move $t4, $a0
+
+    la $t0, buffer_arquivo
+    li $t5, 0
+
+procura_linha:
+
+    beq $t5, $t4, copiar_linha
+
+    lb $t1, 0($t0)
+    beq $t1, 10, prox_linha
 
     addi $t0, $t0, 1
-    addi $t1, $t1, 1
+    j procura_linha
 
+prox_linha:
+    addi $t5, $t5, 1
+    addi $t0, $t0, 1
+    j procura_linha
+
+copiar_linha:
+
+    la $t6, palavra_secreta
+
+loop_copia:
+    lb $t1, 0($t0)
+    beq $t1, 10, fim_escolha
+    beq $t1, $zero, fim_escolha
+
+    sb $t1, 0($t6)
+
+    addi $t6, $t6, 1
+    addi $t0, $t0, 1
     j loop_copia
 
-fim_copia:
-
-    sb $zero, 0($t1)
+fim_escolha:
+    sb $zero, 0($t6)
+    
     jr $ra
+    
 
 #################################################
 #        INICIALIZAR PALAVRA EXIBIDA            #
