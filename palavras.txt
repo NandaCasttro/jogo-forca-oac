@@ -18,11 +18,11 @@ carambola
 melancia
 pitaya
 acerola
-maracujá
+maracuja
 figo
 amora;
 
-PAÍS
+PAIS
 brasil
 alemanha
 madagascar
@@ -39,7 +39,7 @@ lanterna
 grampeador
 almofada;
 
-PROGRAMAÇÃO
+PROGRAMACAO
 computador
 assembly
 programacao
