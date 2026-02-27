@@ -14,8 +14,11 @@ max_erros:        .word 6
 letras_usadas:    .space 26
 qtd_letras:       .word 0
 
-nome_arquivo:     .asciiz "/Users/senhoritaf/Desktop/OAC/Jogo_Forca/palavras.txt"
-buffer_arquivo:   .space 200
+nome_arquivo:     .asciiz "palavras.txt"
+buffer_arquivo:   .space 1024
+
+dica:             .space 40
+input_buffer:     .space 4
 
 # -------- Mensagens --------
 msg_inicio:    .asciiz "\n=== JOGO DA FORCA - OAC ===\n"
@@ -27,6 +30,7 @@ msg_derrota:   .asciiz "\nDERROTA!\n"
 msg_palavra:   .asciiz "\nA palavra era: "
 msg_erros:     .asciiz "Erros: "
 msg_usadas:    .asciiz "Letras usadas: "
+msg_dica:      .asciiz "\nDica: "
 
 
 quebra_linha:  .asciiz "\n"
@@ -49,45 +53,35 @@ msg_teste:         .asciiz "Palavra lida: "
 main:
 
     jal ler_arquivo
-    jal escolher_linha
-    #jal copiar_primeira_palavra
-
-    # imprimir mensagem
-    li $v0, 4
-    la $a0, msg_teste
-    syscall
-
-    # imprimir palavra
-    li $v0, 4
-    la $a0, palavra_secreta
-    syscall
-
-    # pular linha
-    li $v0, 11
-    li $a0, 10
-    syscall
-
-    # encerrar
-    li $v0, 10
-    syscall
-
+    jal escolher_grupo_palavra
 
     # Mostra mensagem inicial
-    #li $v0, 4
-    #la $a0, msg_inicio
-    #syscall
+    li $v0, 4
+    la $a0, msg_inicio
+    syscall
 
-    #jal inicializar_palavra      # Inicializa palavra exibida com "_"
+    # Mostrar dica
+    li $v0, 4
+    la $a0, msg_dica
+    syscall
 
-    #sw $zero, erros              # Resetar erros
-    
-    #sw $zero, qtd_letras         # Resetar letras já usadas
+    li $v0, 4
+    la $a0, dica
+    syscall
 
+    li $v0, 4
+    la $a0, quebra_linha
+    syscall
+
+    jal inicializar_palavra      # Inicializa palavra exibida com "_"
+
+    sw $zero, erros              # Resetar erros
+    sw $zero, qtd_letras         # Resetar letras já usadas
 
     # Avisar Jogador 2
-    #li $v0, 4
-    #la $a0, msg_j2
-    #syscall
+    li $v0, 4
+    la $a0, msg_j2
+    syscall
     
 #################################################
 #               LOOP PRINCIPAL                  #
@@ -126,7 +120,7 @@ ler_arquivo:
     li $v0, 14          # syscall read
     move $a0, $s0
     la $a1, buffer_arquivo
-    li $a2, 200
+    li $a2, 1024
     syscall
     
     move $s1, $v0       # bytes lidos
@@ -142,70 +136,193 @@ ler_arquivo:
     jr $ra
 
 #################################################
-#      ESCOLHER LINHA ALEATORIA                #
+#     ESCOLHER GRUPO E PALAVRA                 #
 #################################################
 
-escolher_linha:
+escolher_grupo_palavra:
 
+    # Contar grupos pelo ';'
     la $t0, buffer_arquivo
     li $t3, 0
 
-conta_loop:
+conta_grupos_loop:
     lb $t1, 0($t0)
-    beq $t1, $zero, fim_conta
-    beq $t1, 10, soma_linha
-    addi $t0, $t0, 1
-    j conta_loop
-
-soma_linha:
+    beq $t1, $zero, conta_grupos_fim
+    li $t2, 59
+    bne $t1, $t2, conta_grupos_next
     addi $t3, $t3, 1
+
+conta_grupos_next:
     addi $t0, $t0, 1
-    j conta_loop
+    j conta_grupos_loop
 
-fim_conta:
-
+conta_grupos_fim:
+    # Escolher grupo aleatorio
     li $v0, 42
     move $a1, $t3
     syscall
-
     move $t4, $a0
 
+    # Encontrar inicio do grupo escolhido
     la $t0, buffer_arquivo
+    move $t7, $t0
     li $t5, 0
 
-procura_linha:
-
-    beq $t5, $t4, copiar_linha
+procura_grupo_loop:
+    beq $t5, $t4, grupo_encontrado
 
     lb $t1, 0($t0)
-    beq $t1, 10, prox_linha
+    beq $t1, $zero, grupo_encontrado
 
-    addi $t0, $t0, 1
-    j procura_linha
+    li $t2, 59
+    bne $t1, $t2, procura_grupo_next
 
-prox_linha:
     addi $t5, $t5, 1
     addi $t0, $t0, 1
-    j procura_linha
 
-copiar_linha:
+pula_quebras_grupo:
+    lb $t1, 0($t0)
+    li $t2, 10
+    beq $t1, $t2, pula_quebras_grupo_avanca
+    li $t2, 13
+    beq $t1, $t2, pula_quebras_grupo_avanca
+    j atualiza_inicio_grupo
 
+pula_quebras_grupo_avanca:
+    addi $t0, $t0, 1
+    j pula_quebras_grupo
+
+atualiza_inicio_grupo:
+    move $t7, $t0
+    j procura_grupo_loop
+
+procura_grupo_next:
+    addi $t0, $t0, 1
+    j procura_grupo_loop
+
+grupo_encontrado:
+    # Copiar cabecalho (dica)
+    la $t6, dica
+
+pula_quebras_dica:
+    lb $t1, 0($t7)
+    li $t2, 10
+    beq $t1, $t2, pula_quebras_dica_avanca
+    li $t2, 13
+    beq $t1, $t2, pula_quebras_dica_avanca
+    j copia_dica_loop
+
+pula_quebras_dica_avanca:
+    addi $t7, $t7, 1
+    j pula_quebras_dica
+
+copia_dica_loop:
+    lb $t1, 0($t7)
+    beq $t1, 10, copia_dica_fim
+    beq $t1, $zero, copia_dica_fim
+    sb $t1, 0($t6)
+    addi $t6, $t6, 1
+    addi $t7, $t7, 1
+    j copia_dica_loop
+
+copia_dica_fim:
+    sb $zero, 0($t6)
+
+    # Pular quebras antes das palavras
+pula_quebras_palavras:
+    lb $t1, 0($t7)
+    li $t2, 10
+    beq $t1, $t2, pula_quebras_palavras_avanca
+    li $t2, 13
+    beq $t1, $t2, pula_quebras_palavras_avanca
+    j inicio_palavras_ok
+
+pula_quebras_palavras_avanca:
+    addi $t7, $t7, 1
+    j pula_quebras_palavras
+
+inicio_palavras_ok:
+    move $s2, $t7
+
+    # Contar palavras do grupo
+    move $t0, $s2
+    li $t8, 0
+    li $t9, 0
+
+conta_palavras_loop:
+    lb $t1, 0($t0)
+    beq $t1, $zero, conta_palavras_fim
+    li $t2, 59
+    beq $t1, $t2, conta_palavras_fim
+    li $t2, 10
+    beq $t1, $t2, conta_palavras_nl
+
+    bne $t9, $zero, conta_palavras_next
+    addi $t8, $t8, 1
+    li $t9, 1
+
+conta_palavras_next:
+    addi $t0, $t0, 1
+    j conta_palavras_loop
+
+conta_palavras_nl:
+    li $t9, 0
+    addi $t0, $t0, 1
+    j conta_palavras_loop
+
+conta_palavras_fim:
+    # Escolher palavra aleatoria
+    li $v0, 42
+    move $a1, $t8
+    syscall
+    move $t4, $a0
+
+    # Selecionar palavra dentro do grupo
+    move $t0, $s2
+    li $t5, 0
+    li $t9, 0
+
+seleciona_palavra_loop:
+    lb $t1, 0($t0)
+    beq $t1, $zero, seleciona_palavra_fim
+    li $t2, 59
+    beq $t1, $t2, seleciona_palavra_fim
+    li $t2, 10
+    beq $t1, $t2, seleciona_palavra_nl
+
+    bne $t9, $zero, seleciona_palavra_next
+    beq $t5, $t4, copia_palavra
+    addi $t5, $t5, 1
+    li $t9, 1
+    j seleciona_palavra_next
+
+seleciona_palavra_next:
+    addi $t0, $t0, 1
+    j seleciona_palavra_loop
+
+seleciona_palavra_nl:
+    li $t9, 0
+    addi $t0, $t0, 1
+    j seleciona_palavra_loop
+
+copia_palavra:
     la $t6, palavra_secreta
 
-loop_copia:
+copia_palavra_loop:
     lb $t1, 0($t0)
-    beq $t1, 10, fim_escolha
-    beq $t1, $zero, fim_escolha
-
+    beq $t1, 10, copia_palavra_fim
+    beq $t1, 13, copia_palavra_fim
+    beq $t1, 59, copia_palavra_fim
+    beq $t1, $zero, copia_palavra_fim
     sb $t1, 0($t6)
-
     addi $t6, $t6, 1
     addi $t0, $t0, 1
-    j loop_copia
+    j copia_palavra_loop
 
-fim_escolha:
+copia_palavra_fim:
     sb $zero, 0($t6)
-    
+
+seleciona_palavra_fim:
     jr $ra
     
 
@@ -223,6 +340,7 @@ loop_init:
     lb $t2, 0($t0)             # carrega caractere atual
 
     beq $t2, 10, fim_init      # se '\n' -> parar
+    beq $t2, 13, fim_init      # se '\r' -> parar
     beq $t2, $zero, fim_init   # se '\0' -> parar
 
     li $t3, 95                 # '_'
@@ -330,16 +448,21 @@ ler_letra:
     la $a0, msg_letra
     syscall
 
-    # Ler caractere
-    li $v0, 12
+ler_letra_loop:
+    # Ler string curta para evitar erro no syscall 12
+    li $v0, 8
+    la $a0, input_buffer
+    li $a1, 4
     syscall
 
-    # Salvar em letra_digitada
-    sb $v0, letra_digitada
-    
-    # Consumir ENTER
-    li $v0, 12
-    syscall
+    lb $t0, input_buffer
+    li $t1, 10
+    beq $t0, $t1, ler_letra_loop
+    li $t1, 13
+    beq $t0, $t1, ler_letra_loop
+
+    # Salvar primeira letra digitada
+    sb $t0, letra_digitada
 
     jr $ra
 
@@ -389,6 +512,7 @@ loop_verifica:
     lb $t2, 0($t0)
 
     beq $t2, 10, fim_verifica   # '\n'
+    beq $t2, 13, fim_verifica   # '\r'
     beq $t2, $zero, fim_verifica
 
     beq $t2, $t3, acertou
@@ -434,6 +558,7 @@ loop_verifica_fim:
     lb $t1, 0($t0)
 
     beq $t1, $zero, venceu   # chegou no fim sem '_'
+    beq $t1, 13, venceu       # trata CR como fim
     
     li $t2, 95               # '_'
     beq $t1, $t2, ainda_nao_venceu
