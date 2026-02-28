@@ -38,7 +38,6 @@ O objetivo do projeto foi implementar o jogo da forca **integralmente em Assembl
 
 O código está dividido em dois segmentos principais:
 
----
 
 ## 🔹 Segmento `.data`
 
@@ -105,6 +104,4 @@ Professor: `André Luiz Menezes`
 
 ---
  
-> ## UNIVERSIDADE FEDERAL DE SERGIPE - CAMPUS ITABAIANA
-> DEPARTAMENTO DE SISTEMAS DE INFORMAÇÃO - 2025.2
-
+> #### UNIVERSIDADE FEDERAL DE SERGIPE - CAMPUS ITABAIANA (DEPARTAMENTO DE SISTEMAS DE INFORMAÇÃO - 2025.2)
