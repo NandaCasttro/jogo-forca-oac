@@ -95,11 +95,11 @@ Toda a lógica do jogo foi desenvolvida em Assembly MIPS, evidenciando controle 
 
 ## Desenvolvedores
 
-`Ariele de Carvalho Mendonça`  
-`Anderson Andrade Santos`  
-`David Santos Silvino`  
-`Fernanda de Castro Alencar Batista`  
-`Victor Pereira Gois`
+- `Ariele de Carvalho Mendonça`  
+- `Anderson Andrade Santos`  
+- `David Santos Silvino`  
+- `Fernanda de Castro Alencar Batista`  
+- `Victor Pereira Gois`
 
 Professor: `André Luiz Menezes`
 
