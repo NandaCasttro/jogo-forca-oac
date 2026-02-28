@@ -13,6 +13,10 @@ O sistema implementa o jogo da forca utilizando:
 - ☕ MARS 4.5 (simulador MIPS)
 - 🔗 Comunicação via subprocess (Python ↔ MIPS)
 
+## 🕹️ Demo
+
+<img src="JogoForca.GIF" width="450">
+
 ---
 
 O objetivo do projeto foi implementar o jogo da forca **integralmente em Assembly MIPS**, aplicando conceitos de:
